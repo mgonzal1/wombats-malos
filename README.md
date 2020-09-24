@@ -1,15 +1,8 @@
-# OCD-WOMBAT Project
+# WOMBAT Project
 
-This is our work project during Neuromatch Academy 2020.
+Development of an end-to-end (stim-to-action) neural network trained only with an encoder (stim->sensory representation) and a decoder (motor choice representation -> action). The intermediate mapping can be trained with additional brain representations, or with a mapping between sensory and motor representations. 
 
-Thanks to our TA Alex Gonzalez and our Mentor Ben Scott
-
-__What is the minimum connectivity of a functional neural network to perform a visual discrimination task?__
-
-In the context of brain lesions and neurodegenerative diseases, we find that neuron populations adapt to the loss of the cell’s viability. The brain’s correct function is often interrupted only at stages where a large percentage of neurons are lost. How does the flow of information can be interrupted by these lesions? Does the location of these regions are essential? 
-
-
-The neural representation of visual and motor information associated with a task is spread on several brain regions conforming to a functional network to engage in different stages of a visual task (visual, motor, and choice related). Using a model where we assume the nature of the information communication between areas, we want to explore what is the minimal neural connectivity that allows the network to perform the task and how performance is affected by artificially lesioning the model.
+The goal is to create a testbed model trained on real neural data, to test hypotheses ranging from number of neurons needed for computation, plasticity, timing, and the utility of other brain regions in the stim-to-action behavior. Because the model is never explicitly trained on stim-to-action, the internal representations and computations of the model can be compared to real neural data without any model bias.
 
 __Model__
 
