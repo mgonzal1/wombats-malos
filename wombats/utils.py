@@ -1,5 +1,4 @@
 # imports
-
 from matplotlib import rcParams
 from matplotlib import pyplot as plt
 from sklearn.linear_model import LinearRegression
@@ -7,12 +6,63 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
-import sklearn.metrics
 import numpy as np
-from sklearn.linear_model import Ridge
-from sklearn.linear_model import Lasso
-from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import mean_squared_error
+import os
+import requests
+from pathlib import Path
+
+
+# import data
+def load_steinmentz(source_path=None):
+    """
+    Args:
+        source_path: string indicating the location of the data
+        if None, and data does not exists locally, the function will attempt to load data from the original URLs.
+    Returns:
+        alldat
+    """
+    file_names = []
+    n_files = 3
+    if source_path is None:
+        source_path = Path(os.getcwd())
+        source_path_flag = False
+    else:
+        source_path_flag = True
+
+    file_found_flag = True
+    for j in range(n_files):
+        file_names.append(source_path / ('steinmetz_part%d.npz' % j))
+        file_found_flag = file_found_flag and file_names[j].exists()
+
+    # if no source given, and file does not exist, load from URL and save.
+    if (not source_path_flag) and (not file_found_flag):
+        print("No source folder given. Sourcing data from original URL & saving data.")
+        print(f"Saving to {source_path}")
+        url = ["https://osf.io/agvxh/download",
+               "https://osf.io/uv3mw/download",
+               "https://osf.io/ehmw2/download"]
+
+        for jj, file in enumerate(file_names):
+            try:
+                r = requests.get(url[jj])
+            except requests.ConnectionError:
+                print("!!! Failed to download data !!!")
+            else:
+                if r.status_code != requests.codes.ok:
+                    print("!!! Failed to download data !!!")
+                else:
+                    with open(file, "wb") as fid:
+                        fid.write(r.content)
+
+    alldat = np.array([])
+    for file in file_names:
+        if file.exists():
+            alldat = np.hstack((alldat, np.load(file, allow_pickle=True)['dat']))
+        else:
+            print(f"File not found: {file}")
+            raise FileNotFoundError
+
+    return alldat
 
 
 # data structuring functions
@@ -32,6 +82,7 @@ def filter_no_go_choice(data_set):
                           dat['response']: which side the response was (-1,  1). Choices for the right stimulus are -1.
     """
     new_data_set = {}
+    trial_time = 2
     index_trials = data_set['response'].nonzero()
     # Remove baseline(first 50 bins) and get FR per neuron
     new_data_set.update({"spks": (data_set["spks"][:, index_trials[0], 50:].sum(axis=2) / trial_time).T})
@@ -40,7 +91,6 @@ def filter_no_go_choice(data_set):
     new_data_set.update({"contrast_right": data_set["contrast_right"][index_trials]})
     new_data_set.update({"contrast_left": data_set["contrast_left"][index_trials]})
     return new_data_set
-
 
 
 def get_spks_from_area(dat, brain_area):
@@ -157,75 +207,6 @@ def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
 
-# models
-def train_linear_encoder(dat_input, dat_output):
-    """
-    function that creates a linear mapping from input to output using least squares
-    :param dat_input: n_trials x n_features
-    :param dat_output: n_trials x n_neurons
-    :return: encoder, coefs,
-    -> encoder, the encoder takes an input matrix multiplies by coeff to create an output_hat
-    -. goes from n_features to n_neurons.
-    -> coefs: n_features x n_neurons
-
-    example use:
-    encoder, encoder_coef = train_linear_encoder(stim, visual_dat)
-    visual_dat_hat = encoder(stim)
-    # or, in this case.
-    visual_dat_hat = stim @ encoder_coef
-    """
-
-    model = LinearRegression(fit_intercept=False).fit(dat_input, dat_output)
-    coefs = model.coef_.T
-
-    def encoder(x):
-        return x@coefs
-
-    return encoder, coefs
-
-### to do:
-def train_logistic_decoder(dat_input, dat_output):
-    """
-    Decoder that goes from neurons to a 1 dimensional binary outcome. (can be expanded to more than 1D)
-    :param dat_input: n_trials x n_neurons
-    :param dat_output: n_trials x 1 [outcome]
-    :return: decoder, decoder_coef.
-    -> decoder: goes from n_neurons to 1 dimension (probability)
-    """
-
-    raise NotImplementedError
-
-
-### to do:
-def train_linear_inner_transition(dat_input, dat_output):
-    """
-    Transition method that fits a matrix to map between input and output. least-squares (ridge?)
-    :param dat_input: n_trials x n_neurons1
-    :param dat_output: n_trials x n_neurons2
-    :return: transition, decoder_coef.
-    -> decoder: goes from n_neurons to 1 dimension (probability)
-    """
-
-    raise NotImplementedError
-
-
 # scores
 ## to do:
-def get_r2(y, y_hat):
-    # get variance explained
-    raise NotImplementedError
-
-## to do:
-def get_acc(y, y_hat):
-    # for binary, obtain accuracy:
-    return np.mean(y==y_hat)
-
-## to do:
-def get_rmse(y, y_hat):
-    raise NotImplementedError
-
-## to do:
-def get_nrmse(y, y_hat):
-    raise NotImplementedError
-
 

@@ -1,0 +1,22 @@
+# compiled #
+*.pyc
+*.~
+*.pyo
+
+# numpy data #
+*.npz
+*.npy
+
+# OS generated files #
+.DS_Store
+.DS_Store?
+._*
+.idea/
+
+# notebook checkpoints
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# builds
+*.egg-info/
+*.egg

@@ -1,4 +1,5 @@
 matplotlib
-sklearn
+scikit-learn
 numpy
 ipywidgets
+seaborn
