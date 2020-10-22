@@ -59,4 +59,6 @@ def nrmse(y, y_hat):
     if y.ndim == 1:
         y = y.reshape(1, -1)
         y_hat = y_hat.reshape(1, -1)
+        x = 0
+        
     return rmse(y, y_hat) / np.mean(y, axis=1)
