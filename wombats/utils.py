@@ -7,6 +7,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 import numpy as np
+import scipy.signal as signal
 import os
 import requests
 from pathlib import Path
@@ -65,6 +66,123 @@ def load_steinmentz(source_path=None):
     return alldat
 
 
+def spikes_to_fr(spk_data, samp_rate=0.01, smoothing_window=0.05, downsampling_factor=1, exclude_pre=None,
+                 exclude_post=None, axis=2):
+    """
+    Args:
+        spk_data: np.ndarray n_neurons x n_trials x n_trial_samps.
+            operations performed along time (axis=2), otherwise specify axis.
+        samp_rate: seconds per time bin [secs/bin]
+        smoothing_window: float [secs], smoothing window in seconds
+        downsampling_factor: int or 'all' factor to downsample signal, if 'all', a single estimate per neuron / trial \
+        is returned and no filtering is performed. if int, it needs to be divisible by n_trial_samps
+        exclude_pre: float [secs], seconds to ignore at the beginning of each trial
+        exclude_post: float [secs], seconds to ignore at the end of each trial
+        axis: int [au], dimension on which to operate.
+
+        Note that exclusion of data for each trial is only for the output. Smoothing operations will still use these
+        time windows to compute.
+
+    Returns:
+        spk_data: np.ndarray n_nuerons x n_trials x n_resulting_bins
+            where the number of resulting bins depends on downsampling factor and the exclusion of data.
+
+    """
+
+    if not (spk_data.ndim == 3):
+        print(f'Currently not supporting data not in 3 dimensions. Num of data dims = {spk_data.ndim}')
+        raise NotImplementedError
+
+    if axis == 2:
+        n_neurons, n_trials, n_trial_samps = spk_data.shape
+    else:
+        print('Currently can only operate on axis=3')
+        raise NotImplementedError
+
+    if exclude_pre is None:
+        trial_start_samp = 0
+    else:
+        trial_start_samp = np.round(exclude_pre / samp_rate).astype(int)
+
+    if exclude_post is None:
+        trial_end_samp = n_trial_samps
+    else:
+        trial_end_samp = n_trial_samps - np.round(exclude_pre / samp_rate).astype(int)
+
+    trial_time = (trial_end_samp-trial_start_samp) * samp_rate
+
+    if isinstance(downsampling_factor, str):
+        if downsampling_factor == 'all':
+            return spk_data[:, :, trial_start_samp:trial_end_samp].sum(axis=2)/trial_time
+        else:
+            print(f'Downsampling {downsampling_factor} not understood.')
+            raise NotImplementedError
+    elif isinstance(downsampling_factor, int):
+        if np.mod(n_trial_samps, downsampling_factor) > 0:
+            print(f'Dowsampling of {downsampling_factor} not a multiple of n_trial_samps {n_trial_samps}')
+            raise ValueError
+
+        n_trial_samps = int(n_trial_samps/downsampling_factor)
+        trial_start_samp = int(trial_start_samp/downsampling_factor)
+        trial_end_samp = int(trial_end_samp/downsampling_factor)
+
+    else:
+        raise TypeError
+
+    filter_len = np.round(smoothing_window / samp_rate).astype(int)
+
+    if downsampling_factor >= 3*filter_len:
+        print('The requested downsampling requires a larger filter. Increase the smoothing.')
+        print(f'Min smoothing_window = {samp_rate*downsampling_factor/3:.3f} secs')
+        raise ValueError
+
+    # convert to float and spks/sec, and flatten
+    fr_data = spk_data.astype(np.float32)/samp_rate
+    fr_data = fr_data.reshape(n_neurons,-1)
+
+    # filter by neuron
+    fr_data = filter_data(fr_data, filter_len)
+
+    # downsample
+    fr_data_ds = fr_data[:, ::downsampling_factor]
+
+    # re-arrange to trials
+    fr_trial_data = fr_data_ds.reshape(n_neurons, n_trials, n_trial_samps)
+
+    # select relevant samples and return
+    return fr_trial_data[:, :, trial_start_samp:trial_end_samp]
+
+
+def filter_data(data, filter_len):
+    """
+    Filter along 2nd dimension looping through first. this is hann FIR filter.
+    Args:
+        data: n_signals x n_samps
+        filter_len: length of filter window for hann filter
+
+    Returns: filtered data.
+
+    """
+
+    if data.ndim == 1:
+        # add singleton dimension
+        data = data.reshape(1, -1)
+
+    filt_coef = signal.windows.hann(filter_len)
+    filt_coef /= filt_coef.sum()
+
+    out = np.zeros_like(data)
+    for ii, sig in enumerate(data):
+        out[ii] = signal.filtfilt(filt_coef, 1, sig)
+
+    return out
+
+
+
+    return
+
+
+
 # data structuring functions
 def filter_no_go_choice(data_set):
     # to do. make time window a parameter.
@@ -82,10 +200,8 @@ def filter_no_go_choice(data_set):
                           dat['response']: which side the response was (-1,  1). Choices for the right stimulus are -1.
     """
     new_data_set = {}
-    trial_time = 2
     index_trials = data_set['response'].nonzero()
-    # Remove baseline(first 50 bins) and get FR per neuron
-    new_data_set.update({"spks": (data_set["spks"][:, index_trials[0], 50:].sum(axis=2) / trial_time).T})
+    new_data_set.update({"spks": data_set["spks"][:, index_trials[0], :]})
     new_data_set.update({"brain_area": data_set["brain_area"]})
     new_data_set.update({"response": data_set["response"][index_trials]})
     new_data_set.update({"contrast_right": data_set["contrast_right"][index_trials]})
@@ -100,7 +216,7 @@ def get_spks_from_area(dat, brain_area):
     for neuron in range(n_neurons):
         index_neurons[neuron] = dat['brain_area'][neuron] in brain_area
 
-    area_data = (spks[index_neurons, :].T)
+    area_data = spks[index_neurons, :].T
     return area_data, index_neurons
 
 
