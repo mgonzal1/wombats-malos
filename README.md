@@ -7,3 +7,26 @@ The goal is to create a testbed model trained on real neural data, to test hypot
 __Model__
 
 ![Alt text](/img/model.png?raw=true "Title")
+
+
+## To install:
+```
+$ cd your_path
+$ git clone https://github.com/mgonzal1/wombats-malos.git
+$ pip install -e wombats
+```
+
+## Importing
+```
+import wombats
+# or to import specific modules
+from wombats import metrics
+from wombats import models
+
+# if you change the source files, and want to test the results in a console:
+from importlib import reload
+metrics = reload(metrics)
+models = reload(models)
+```
+
+### Check the notebooks directory for initial usage
