@@ -39,6 +39,12 @@ def train_logistic_decoder(dat_input, dat_output):
     :return: decoder, decoder_coef.
     -> decoder: goes from n_neurons to 1 dimension (probability)
     """
+    model = LogisticRegression(fit_intercept=False),fit(dat_input,dat_output)
+    coefs = model.coef_.T
+    def encoder(x):
+        return x@coefs
+
+    return encoder, coefs
 
     raise NotImplementedError
 
@@ -52,5 +58,7 @@ def train_linear_inner_transition(dat_input, dat_output):
     :return: transition, decoder_coef.
     -> decoder: goes from n_neurons to 1 dimension (probability)
     """
+   
+
 
     raise NotImplementedError
