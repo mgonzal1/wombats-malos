@@ -39,6 +39,11 @@ def train_logistic_decoder(dat_input, dat_output):
     :return: decoder, decoder_coef.
     -> decoder: goes from n_neurons to 1 dimension (probability)
     """
+    n_trials, n_neurons = dat_input.shape()
+
+    model = LogisticRegression(penalty="l2", C=1/np.log(n_neurons), max_iter=5000)
+    model.fit(dat_input, dat_output)
+
 
     raise NotImplementedError
 
