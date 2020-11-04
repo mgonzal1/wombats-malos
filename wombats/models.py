@@ -43,9 +43,9 @@ def train_logistic_decoder(dat_input, dat_output):
 
     model = LogisticRegression(penalty="l2", C=1/np.log(n_neurons), max_iter=5000)
     model.fit(dat_input, dat_output)
+    decoder = model.get_params()
 
-
-    raise NotImplementedError
+    return decoder
 
 
 # to do:
