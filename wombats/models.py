@@ -41,11 +41,19 @@ def train_logistic_decoder(dat_input, dat_output):
     """
     n_trials, n_neurons = dat_input.shape()
 
-    model = LogisticRegression(penalty="l2", C=1/np.log(n_neurons), max_iter=5000)
-    model.fit(dat_input, dat_output)
-    decoder = model.get_params()
-    coef = model.coef_[0]
-
+    
+    # penalized LR
+    #model = LogisticRegression(penalty="l2", C=1/np.log(n_neurons), max_iter=5000).fit(dat_input,dat_output)
+   
+    # unpenalized LR
+    model = LogisticRegression(penalty="none", fit_intercept=False, class_weight="balanced", max_iter=5000).fit(dat_input, dat_output)   
+    
+    coefs = model.coef_.T
+    
+    def decoder(x):
+        # this is equivalent to sigmoid(x@coefs)>0.5;
+        return model.predict(x)
+    
     return decoder, coef
 
 
