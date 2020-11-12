@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
+from . import utils
 
 
 # models
@@ -21,50 +22,83 @@ def train_linear_encoder(dat_input, dat_output):
     visual_dat_hat = stim @ encoder_coef
     """
 
-    model = LinearRegression(fit_intercept=False).fit(dat_input, dat_output)
-    coefs = model.coef_.T
+    model = LinearRegression(fit_intercept=False)
+    fit = model.fit(dat_input, dat_output)
+    coefs = fit.coef_.T
 
     def encoder(x):
-        return x@coefs
+        # for a linreg model equivalent to x@coef
+        return fit.predict(x)
 
-    return encoder, coefs
+    return encoder, coefs, model
 
 
-# to do:
-def train_logistic_decoder(dat_input, dat_output):
+def train_logistic_decoder(dat_input, dat_output, output_type='bool'):
     """
     Decoder that goes from neurons to a 1 dimensional binary outcome. (can be expanded to more than 1D)
     :param dat_input: n_trials x n_neurons
-    :param dat_output: n_trials x 1 [outcome]
+    :param dat_output: n_trials x 1 [outcome]; bool type
+    :param output_type: string ['prob', 'bool'], if prob, returns the probability of binary decision==1
     :return: decoder, decoder_coef.
     -> decoder: goes from n_neurons to 1 dimension (probability)
     """
-    n_trials, n_neurons = dat_input.shape()
+    n_trials, n_neurons = dat_input.shape
 
-    
-    # penalized LR
-    #model = LogisticRegression(penalty="l2", C=1/np.log(n_neurons), max_iter=5000).fit(dat_input,dat_output)
-   
     # unpenalized LR
-    model = LogisticRegression(penalty="none", fit_intercept=False, class_weight="balanced", max_iter=5000).fit(dat_input, dat_output)   
-    
-    coefs = model.coef_.T
-    
-    def decoder(x):
-        # this is equivalent to sigmoid(x@coefs)>0.5;
-        return model.predict(x)
-    
-    return decoder, coef
+    model = LogisticRegression(penalty="none",
+                               fit_intercept=False,
+                               class_weight="balanced",
+                               max_iter=5000)
+    fit = model.fit(dat_input, dat_output)
+
+    coefs = fit.coef_.T
+
+    if output_type == 'bool':
+        def decoder(x):
+            # this is equivalent to sigmoid(x@coefs)>0.5;
+            return fit.predict(x)
+    elif output_type == 'prob':
+        def decoder(x):
+            return utils.sigmoid(x@coefs)
+    else:
+        print(f"{output_type} not implemented.")
+        raise NotImplementedError
+
+    return decoder, coefs, model
 
 
-# to do:
-def train_linear_inner_transition(dat_input, dat_output):
+def train_linear_transition(dat_input, dat_output):
     """
     Transition method that fits a matrix to map between input and output. least-squares (ridge?)
     :param dat_input: n_trials x n_neurons1
     :param dat_output: n_trials x n_neurons2
     :return: transition, decoder_coef.
-    -> decoder: goes from n_neurons to 1 dimension (probability)
+    -> inner_trans: goes from n_neurons to 1 dimension (probability)
     """
+    n_trials, n_neurons = dat_input.shape
+    model = LinearRegression(fit_intercept=False)
+    fit = model.fit(dat_input, dat_output)
+    coefs = model.coef_.T
 
-    raise NotImplementedError
+    def transition(x):
+        # for a linreg model equivalent to x@coef
+        return fit.predict(x)
+
+    return transition, coefs, model
+
+
+def model_stim_to_decision(stim, encoder, transition, decoder):
+    """
+    function that maps stim to decision based on
+    Args:
+        stim: n_trials x n_features
+        encoder: output from train_{}_encoder
+        transition: output from train_{}_transition
+        decoder: output from train_{}_decoder
+
+    Returns:
+        decisions: n_trials x 1 of outputs as determined by the decoder
+
+    """
+    return decoder(transition(encoder(stim)))
+

@@ -113,7 +113,8 @@ def spikes_to_fr(spk_data, samp_rate=0.01, smoothing_window=0.05, downsampling_f
 
     if isinstance(downsampling_factor, str):
         if downsampling_factor == 'all':
-            return spk_data[:, :, trial_start_samp:trial_end_samp].sum(axis=2)/trial_time
+            temp = spk_data[:, :, trial_start_samp:trial_end_samp].sum(axis=2)/trial_time
+            return temp[:, :, np.newaxis]
         else:
             print(f'Downsampling {downsampling_factor} not understood.')
             raise NotImplementedError
@@ -178,11 +179,6 @@ def filter_data(data, filter_len):
     return out
 
 
-
-    return
-
-
-
 # data structuring functions
 def filter_no_go_choice(data_set):
     # to do. make time window a parameter.
@@ -209,15 +205,16 @@ def filter_no_go_choice(data_set):
     return new_data_set
 
 
-def get_spks_from_area(dat, brain_area):
-    spks = dat["spks"].T
-    n_neurons = spks.shape[0]
+def get_dat_from_area(dat, brain_area, dat_type):
+
+    n_neurons = dat[dat_type].shape[0]
     index_neurons = np.zeros(n_neurons, dtype=bool)
     for neuron in range(n_neurons):
         index_neurons[neuron] = dat['brain_area'][neuron] in brain_area
 
-    area_data = spks[index_neurons, :].T
-    return area_data, index_neurons
+    area_fr = dat[dat_type][index_neurons]
+
+    return area_fr, index_neurons
 
 
 ### to do:
@@ -225,16 +222,13 @@ def get_spks_from_area(dat, brain_area):
 # eg. get_region_data(data_set,'visual')
 # data set should then have a field defining what sub areas are part of visual:
 # data_set['areas']['visual'] = ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl"]
-def get_visual_ctx(data_set):
-    visual_ctx = ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl"]
-    visual_data, _ = get_spks_from_area(data_set, visual_ctx)
-    return visual_data
+def get_region_data(data_set, region, data_type):
+    regions = {"visual": ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl"],
+               "motor": ["CL", "LD", "LGd", "LH", "LP", "MD", "MG", "PO",
+                         "POL", "PT", "RT", "SPF", "TH", "VAL", "VPL", "VPM"]}
 
-
-def get_motor_ctx(data_set):
-    motor_ctx = ["CL", "LD", "LGd", "LH", "LP", "MD", "MG", "PO", "POL", "PT", "RT", "SPF", "TH", "VAL", "VPL", "VPM"]
-    motor_data, _ = get_spks_from_area(data_set, motor_ctx)
-    return motor_data
+    region_data, _ = get_dat_from_area(data_set, regions[region], data_type)
+    return region_data
 
 
 def get_stimulus(data_set):
@@ -284,8 +278,7 @@ def get_binary_response(data_set):
     return binary_response
 
 
-## make test size an input parameter
-def split_validation_set(data_set):
+def split_validation_set(data_set, test_size=0.1, random_seed=None):
     """
     Get a subset of alldat for validation purposes. This should be ~5%-10% of all the data.
 
@@ -297,24 +290,42 @@ def split_validation_set(data_set):
                        dat['response']: which side the response was (-1,  1). Choices for the right stimulus are -1.
     """
 
+    if random_seed is None:
+        np.random.seed(42)
+    else:
+        np.random.seed(random_seed)
+
     stims = get_stimulus(data_set)
     response = get_response(data_set)
-    spk = data_set['spks']
-    # # create training and testing vars
-    stim_train, stim_test, spk_train, spk_test, response_train, response_test = train_test_split(stims, spk, response,
-                                                                                                 test_size=0.1)
+    spks = data_set['spks']
+
+    n_trials = len(data_set['response'])
+    n_test_trials = np.ceil(n_trials*test_size).astype(int)
+    n_train_trials = n_trials-n_test_trials
+
+    trial_idx = np.arange(n_trials)
+    trial_train_idx = np.sort(np.random.permutation(n_trials)[:n_train_trials])
+    trial_test_idx = np.setdiff1d(trial_idx, trial_train_idx)
+
+    # create training and testing vars
     train_set = {
-        "spks": spk_train,
-        "stims": stim_train,
-        "response": response_train,
+        "spks": spks[:, trial_train_idx],
+        "stims": stims[trial_train_idx],
+        "response": response[trial_train_idx],
         "brain_area": data_set['brain_area']
     }
+
     validation_set = {
-        "spks": spk_test,
-        "stims": stim_test,
-        "response": response_test,
+        "spks": spks[:, trial_test_idx],
+        "stims": stims[trial_test_idx],
+        "response": response[trial_test_idx],
         "brain_area": data_set['brain_area']
     }
+
+    if 'fr' in data_set.keys():
+        train_set['fr'] = data_set['fr'][:, trial_train_idx]
+        validation_set['fr'] = data_set['fr'][:, trial_test_idx]
+
     return train_set, validation_set
 
 
