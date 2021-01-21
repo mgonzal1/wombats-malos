@@ -1,5 +1,5 @@
 import random
-import numpy
+import numpy as np
 
 
 def a1_pert(encoder_output, n_pert):
