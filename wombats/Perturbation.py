@@ -2,7 +2,7 @@ import random
 import numpy
 
 
-def A1_pert(encoder_output, n_pert):
+def a1_pert(encoder_output, n_pert):
     # perturbar por fila/row
     trial, neuron = encoder_output.shape
     list_pert = list(np.arange(neuron-1))
