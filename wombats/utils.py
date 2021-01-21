@@ -224,8 +224,7 @@ def get_dat_from_area(dat, brain_area, dat_type):
 # data_set['areas']['visual'] = ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl"]
 def get_region_data(data_set, region, data_type):
     regions = {"visual": ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl"],
-               "motor": ["CL", "LD", "LGd", "LH", "LP", "MD", "MG", "PO",
-                         "POL", "PT", "RT", "SPF", "TH", "VAL", "VPL", "VPM"]}
+               "motor": ["MOp", "MOs"]}
 
     region_data, _ = get_dat_from_area(data_set, regions[region], data_type)
     return region_data
