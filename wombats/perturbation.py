@@ -6,16 +6,18 @@ import numpy as np
 # pertubation type:
 # ablation => set neurons to zero
 # white noise
-# poisson noise (if using spike counts not firing rate)
-# neural noise (get neuron specific firing probability) [needs neuron stats]
-# hyperactivate => set neuron to max fr [needs max fr as input]
-# scramble conections (permute columns); [needs how many to scramble]
-
-def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation"):
+# poisson noise (if using spike counts not firing rate) [needs rate x neuron]
+# neural noise (get neuron specific firing probability) [needs stats x neuron]
+# hyperactivate => set neuron to max fr [needs max fr x neurons]
+# scramble conections (permute columns);
+#
+# next next todo: input pertubation idx
+def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwargs):
     """
     inputs:
     returns:
     """
+   
     
     return pert_connection_mat, pert_idx 
 
