@@ -3,7 +3,8 @@ import numpy as np
 
 
 def a1_pert(encoder_output, n_pert):
-    # perturbar por fila/row
+    # perturbar por columna/neurona
+    # todo: n_pert <= n_neurons
     n_trials, n_neurons = encoder_output.shape
     list_pert = list(np.arange(n_neurons-1))
     ablated_neurons = random.sample(list_pert, n_pert)
