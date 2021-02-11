@@ -1,4 +1,3 @@
-import random
 import numpy as np
 
 # todo:
@@ -37,13 +36,16 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
 
     # ablation 
     n_trials, n_neurons = connection_mat.shape
-    list_pert = list(np.arange(n_neurons-1))
-    ablated_n = random.sample(list_pert, n_neurons*pct_pert)
-    pert_connection_mat[:,ablated_n] = 0
-
-
-    # white_noise
+   
+    n_pert_neurons = np.ceil(n_neurons*pct_pert)
+    pert_neurons = np.sort(np.random.permutation(n_neurons)[:n_pert_neurons])
     
+    if pert_type=="ablation":
+        pert_connection_mat[:,pert_neurons] = 0
+    elif pert_type=="white_noise":
+        # use connectivity mean & variance?
+        pert_connection_mat[:,pert_neurons] = np.random.normal(0,1,n_pert_neurons)
+
 
 
     # poisson
