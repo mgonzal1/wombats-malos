@@ -197,6 +197,7 @@ def filter_no_go_choice(data_set):
     """
     new_data_set = {}
     index_trials = data_set['response'].nonzero()
+    
     new_data_set.update({"spks": data_set["spks"][:, index_trials[0], :]})
     new_data_set.update({"brain_area": data_set["brain_area"]})
     new_data_set.update({"response": data_set["response"][index_trials]})
@@ -277,16 +278,23 @@ def get_binary_response(data_set):
     return binary_response
 
 
-def split_validation_set(data_set, test_size=0.1, random_seed=None):
+def split_validation_set(data_set, val_size=0.1, random_seed=None):
     """
     Get a subset of alldat for validation purposes. This should be ~5%-10% of all the data.
-
+    Excludes no go or no response trials and returns these as separate sets
 
     Returns:
      train_set (dict): dat['spks']: neurons by trials.
                        dat['brain_area']: brain area for each neuron recorded.
                        dat['stims']: contrast level for the right stimulus, which is always contralateral to the recorded brain areas.
                        dat['response']: which side the response was (-1,  1). Choices for the right stimulus are -1.
+                       
+     val_set (dict): validation data split
+     
+     no_go_set (dict): no go trials
+     
+     no_res_set (dict): no resp trials
+    
     """
 
     if random_seed is None:
@@ -295,37 +303,46 @@ def split_validation_set(data_set, test_size=0.1, random_seed=None):
         np.random.seed(random_seed)
 
     stims = get_stimulus(data_set)
+    delta_contrast = data_set['contrast_left']-data_set['contrast_right']
     response = get_response(data_set)
     spks = data_set['spks']
 
     n_trials = len(data_set['response'])
-    n_test_trials = np.ceil(n_trials*test_size).astype(int)
-    n_train_trials = n_trials-n_test_trials
+    all_trials = np.arange(n_trials)
+    
+    no_resp_trials = np.where(data_set['response']==0)[0]
+    no_go_trials = np.where(delta_contrast==0)[0]
+    
+    valid_trials = np.setdiff1d(all_trials, no_resp_trials)
+    valid_trials = np.setdiff1d(valid_trials, no_go_trials)
+    n_valid_trials = len(valid_trials)
+    
+    n_val_trials = np.ceil(n_valid_trials*val_size).astype(int)
+    n_train_trials = n_valid_trials-n_val_trials
 
-    trial_idx = np.arange(n_trials)
-    trial_train_idx = np.sort(np.random.permutation(n_trials)[:n_train_trials])
-    trial_test_idx = np.setdiff1d(trial_idx, trial_train_idx)
+    train_trials = np.sort( np.random.permutation(valid_trials)[:n_train_trials] )
+    val_trials = np.setdiff1d(valid_trials, train_trials)
 
-    # create training and testing vars
-    train_set = {
-        "spks": spks[:, trial_train_idx],
-        "stims": stims[trial_train_idx],
-        "response": response[trial_train_idx],
-        "brain_area": data_set['brain_area']
-    }
+    def _create_set(trial_idx):
+        new_set = {
+            "spks": spks[:, trial_idx],
+            "stims": stims[trial_idx],
+            "delta_contrast": delta_contrast[trial_idx],
+            "response": response[trial_idx],
+            "brain_area": data_set['brain_area']
+        }
+        
+        if 'fr' in data_set.keys():
+            new_set['fr'] = data_set['fr'][:, trial_idx]
 
-    validation_set = {
-        "spks": spks[:, trial_test_idx],
-        "stims": stims[trial_test_idx],
-        "response": response[trial_test_idx],
-        "brain_area": data_set['brain_area']
-    }
+        return new_set
+    
+    train_set = _create_set(train_trials)
+    val_set = _create_set(val_trials)
+    no_go_set = _create_set(no_go_trials)
+    no_resp_set = _create_set(no_resp_trials)
 
-    if 'fr' in data_set.keys():
-        train_set['fr'] = data_set['fr'][:, trial_train_idx]
-        validation_set['fr'] = data_set['fr'][:, trial_test_idx]
-
-    return train_set, validation_set
+    return train_set, val_set, no_go_set, no_resp_set
 
 
 # Draft of sigmoid calculation
