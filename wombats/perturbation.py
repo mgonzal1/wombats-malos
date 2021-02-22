@@ -46,9 +46,9 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
         # use connectivity mean & variance?
         pert_connection_mat[:,pert_neurons] = np.random.normal(0,1,n_pert_neurons)
 
-
-
     # poisson
+    elif pert_type == 'poisson':
+        pert_connection_mat[:,pert_neurons] = np.random.poisson((0,1), n_pert_neurons)
 
 
 
