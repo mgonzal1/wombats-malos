@@ -48,7 +48,8 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
 
     # poisson
     elif pert_type == 'poisson':
-        pert_connection_mat[:,pert_neurons] = np.random.poisson((0,1), n_pert_neurons)
+        lam = 1
+        pert_connection_mat[:,pert_neurons] = np.random.poisson(lam, n_pert_neurons)
 
 
 
@@ -56,7 +57,8 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
 
 
 
-    # hyperactive
+
+    # stregthten the connectivity by a
 
 
 
