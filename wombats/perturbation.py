@@ -33,7 +33,11 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
 
     """
 
-
+    params = {"normal_mu":0, "normal_sigma":1 ,"poisson_lam": 1, 'random_seed': 0}
+    params.update(kwargs)
+    
+    np.random.seed(params['random_seed'])
+    
     # ablation 
     n_trials, n_neurons = connection_mat.shape
    
@@ -42,25 +46,24 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
     
     if pert_type=="ablation":
         pert_connection_mat[:,pert_neurons] = 0
+    
     elif pert_type=="white_noise":
         # use connectivity mean & variance?
-        pert_connection_mat[:,pert_neurons] = np.random.normal(0,1,n_pert_neurons)
-
+        pert_connection_mat[:,pert_neurons] = np.random.normal(params['normal_mu'], params['normal_sigma'],n_pert_neurons)
+    
     # poisson
     elif pert_type == 'poisson':
-        pert_connection_mat[:,pert_neurons] = np.random.poisson((0,1), n_pert_neurons)
+        pert_connection_mat[:,pert_neurons] = np.random.poisson(params['poisson_lam'], n_pert_neurons)
+    
+    # scramble connectivity - sample from weight distribution
+
+    # scramble neurons - scramble n_pert_neurons columns
+
+    # strengthen - param is % increase of true connectivity
 
 
 
-    # neural_noise
-
-
-
-    # hyperactive
-
-
-
-    # scramble
+    
     
 
 
