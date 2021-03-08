@@ -55,11 +55,11 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
     elif pert_type == 'poisson':
         pert_connection_mat[:,pert_neurons] = np.random.poisson(params['poisson_lam'], n_pert_neurons)
     
-    # scramble connectivity - sample from weight distribution
+    # scramble connectivity - [Milli] sample from weight distribution
 
-    # scramble neurons - scramble n_pert_neurons columns
+    # scramble neurons - [Adriana] scramble n_pert_neurons columns
 
-    # strengthen - param is % increase of true connectivity
+    # strengthen - [Fran] param is % increase of true connectivity
 
 
 

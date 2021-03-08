@@ -291,10 +291,13 @@ def split_validation_set(data_set, val_size=0.1, random_seed=None):
                        
      val_set (dict): validation data split
      
-     no_go_set (dict): no go trials
+     nogo_set (dict): no go trials & animal responded
      
-     no_res_set (dict): no resp trials
-    
+     noresp_set (dict): no resp trials & go trials
+     
+     nono_set (dict): no go trials & no response (correct)
+     
+     ** note contrast values are expected to be positive.
     """
 
     if random_seed is None:
@@ -307,14 +310,15 @@ def split_validation_set(data_set, val_size=0.1, random_seed=None):
     response = get_response(data_set)
     spks = data_set['spks']
 
-    n_trials = len(data_set['response'])
+    n_trials = len(response)
     all_trials = np.arange(n_trials)
     
-    no_resp_trials = np.where(data_set['response']==0)[0]
-    no_go_trials = np.where(delta_contrast==0)[0]
+    nono_trials = np.where((response==0) & (delta_contrast==0))[0]
+    noresp_trials = np.setdiff1d( np.where(response==0)[0], nono_trials)
+    nogo_trials = np.setdiff1d( np.where(delta_contrast==0)[0], nono_trials)
+    no_trials = np.union1d(np.union1d(nogo_trials, noresp_trials), nono_trials)
     
-    valid_trials = np.setdiff1d(all_trials, no_resp_trials)
-    valid_trials = np.setdiff1d(valid_trials, no_go_trials)
+    valid_trials = np.setdiff1d(all_trials, no_trials)
     n_valid_trials = len(valid_trials)
     
     n_val_trials = np.ceil(n_valid_trials*val_size).astype(int)
@@ -329,7 +333,8 @@ def split_validation_set(data_set, val_size=0.1, random_seed=None):
             "stims": stims[trial_idx],
             "delta_contrast": delta_contrast[trial_idx],
             "response": response[trial_idx],
-            "brain_area": data_set['brain_area']
+            "brain_area": data_set['brain_area'],
+            "trial_idx": trial_idx
         }
         
         if 'fr' in data_set.keys():
@@ -339,10 +344,11 @@ def split_validation_set(data_set, val_size=0.1, random_seed=None):
     
     train_set = _create_set(train_trials)
     val_set = _create_set(val_trials)
-    no_go_set = _create_set(no_go_trials)
-    no_resp_set = _create_set(no_resp_trials)
+    nogo_set = _create_set(nogo_trials)
+    noresp_set = _create_set(noresp_trials)
+    nono_set = _create_set(nono_trials)
 
-    return train_set, val_set, no_go_set, no_resp_set
+    return train_set, val_set, nogo_set, noresp_set, nono_set
 
 
 # Draft of sigmoid calculation
