@@ -62,3 +62,26 @@ def nrmse(y, y_hat):
         x = 0
         
     return rmse(y, y_hat) / np.mean(y, axis=1)
+
+def get_xval_perf(model, input_data, output_data, n_xval=N_XVAL, scoring='explained_variance'):
+    
+    if output_data.ndim==1:
+        output_data = output_data[:, np.newaxis]
+
+    n_outputs = output_data.shape[1]
+    
+    perf = np.zeros((n_outputs, n_xval))
+    for output_idx in range(n_outputs):
+        perf[output_idx] = cross_val_score(model, input_data, output_data[:, output_idx], cv=n_xval, scoring=scoring)
+        
+    return perf
+
+def regression_performance_by_neuron(data, data_hat, xval_perf):
+    #MSE and R2 per unit
+    scores = pd.DataFrame(columns = ['r2', 'xval_r2', 'mse', 'nrmse'])
+    scores['r2'] = metrics.r2(data.T, data_hat.T)
+    scores['mse'] = metrics.mse(data.T, data_hat.T)
+    scores['nrmse'] = metrics.nrmse(data.T, data_hat.T)
+    scores['xval_r2'] = np.median(xval_perf,axis=1)
+
+    return scores.mean()

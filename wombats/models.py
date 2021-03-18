@@ -4,6 +4,101 @@ from sklearn.linear_model import LogisticRegression
 from . import utils
 
 
+## high level interfaces functions
+def get_a1(stim, region_dat):
+    
+    n_region_neurons = region_dat.shape[0]
+    n_analysis_time_bins = region_dat.shape[2]
+    
+    if n_analysis_time_bins==1:
+        region_dat = region_dat.squeeze().T  # reshapes from neurons x trial x 1 bin, to trials x neurons
+        
+        # Model Linear Regression
+        encoder, encoder_coefs, encoder_model = train_linear_encoder(stim, region_dat)
+        A1 = encoder_coefs
+        
+        # get training data prediction
+        region_dat_hat = encoder(stim)  
+    
+        # get performance
+        encoder_perf = get_xval_perf(model=encoder_model, input_data=stim, output_data=region_dat, scoring='explained_variance')
+    else:
+        # need to implement a method for time window iteration
+        raise NotImplementedError
+    
+    return A1, encoder_perf, region_dat_hat
+
+
+def get_a2(region1_dat, region2_dat):
+    """
+    :param region1_dat: generated output from a1
+    """
+    
+    # Get data
+    #region2_dat = utils.get_region_data(train_set, region=region2, data_type='fr') 
+    n_region2_neurons = region2_dat.shape[0]
+    n_analysis_time_bins = region2_dat.shape[2]
+    
+    if n_analysis_time_bins==1:
+        region2_dat = region2_dat.squeeze().T  # reshapes from neurons x trial x 1 bin, to trials x neurons
+        
+        # Model Linear Regression
+        transition, transition_coefs, transition_model = train_linear_transition(region1_dat, region2_dat)
+        A2 = transition_coefs
+        
+        # get training data prediction
+        region2_dat_hat = transition(region1_dat)
+
+        # get performance
+        transition_perf = get_xval_perf(model=transition_model, input_data=region1_dat, output_data=region2_dat, scoring='explained_variance')  
+
+    else:
+        # need to implement a method for time window iteration
+        raise NotImplementedError
+    
+    return A2, transition_perf, region2_dat_hat
+
+
+def get_a3(region_dat, output_dat):
+    n_region_neurons = region_dat.shape[0]
+    n_analysis_time_bins = region_dat.shape[2]
+    
+    if n_analysis_time_bins==1:
+        region_dat = region_dat.squeeze().T  # reshapes from neurons x trial x 1 bin, to trials x neurons
+        
+        # Model Linear Regression
+        decoder, decoder_coefs, decoder_model = train_logistic_decoder(region_dat, output_dat)
+        A3 = decoder_coefs
+        
+        # get prediction
+        region_dat_hat = decoder(region_dat)
+    
+        # get performance
+        decoder_perf = get_xval_perf(model=decoder_model, input_data=region_dat, output_data=output_dat, scoring='balanced_accuracy')
+    else:
+        # need to implement a method for time window iteration
+        raise NotImplementedError
+    
+    return A3, decoder_perf, region_dat_hat
+
+def get_ae(A1, A2, A3):
+    return A1@A2@A3
+
+def get_model_output(stim, AE=None, A1=None, A2=None, A3=None, output_type='bool'):
+    
+    if AE is None:
+        linear_output = stim @ A1 @ A2 @ A3
+    else:
+        linear_output = stim @ AE
+        
+    if output_type=='prob':
+        output = utils.sigmoid(linear_output).flatten()
+    elif output_type == 'bool':
+        output = (linear_output>0).flatten()
+        
+    return output
+
+
 # models
 def train_linear_encoder(dat_input, dat_output):
     """
