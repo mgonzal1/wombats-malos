@@ -39,6 +39,7 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
    
     n_pert_neurons = np.ceil(n_neurons*pct_pert)
     pert_neurons = np.sort(np.random.permutation(n_neurons)[:n_pert_neurons])
+    pert_connection_mat = connection_mat
     
     if pert_type=="ablation":
         pert_connection_mat[:,pert_neurons] = 0
@@ -59,6 +60,8 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
 
 
     # stregthten the connectivity by a
+    if pert_type=="hyperactive":
+        pert_connection_mat[:,pert_neurons] = 1
 
 
 
