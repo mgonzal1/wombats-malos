@@ -63,7 +63,7 @@ def nrmse(y, y_hat):
         
     return rmse(y, y_hat) / np.mean(y, axis=1)
 
-def get_xval_perf(model, input_data, output_data, n_xval=N_XVAL, scoring='explained_variance'):
+def get_xval_perf(model, input_data, output_data, n_xval=10, scoring='explained_variance'):
     
     if output_data.ndim==1:
         output_data = output_data[:, np.newaxis]

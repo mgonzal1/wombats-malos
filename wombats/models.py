@@ -195,3 +195,46 @@ def model_stim_to_decision(stim, encoder, transition, decoder):
     """
     return decoder(transition(encoder(stim)))
 
+
+class two_region_linear_model():
+    def __init__(self, data_set, region1='visual', region2='motor', n_xval=10, data_type='fr', time_window=None, **kwargs):
+        self.region1 = region1
+        self.region2 = region2
+        self.n_xval = n_xval
+        self.data_type = data_type
+        
+        if time_window is None
+            self.time_window = np.array([0, 0.5])
+        else:
+            if len(time_window)==2:
+                if time_window[1]>time_window[0]:
+                    self.time_window = time_window
+                else:
+                    sys.exit("Invalid Time Window")
+            else:
+                sys.exit("Invalid Time Window")
+        
+        if 'encoder' not in kwargs:
+            self.encoder_func = train_linear_encoder
+        else:
+            self.encoder_func = kwargs['encoder']
+            
+        if 'decoder' not in kwargs:
+            self.decoder_func = train_logistic_decoder
+        else:
+            self.decoder_func = kwargs['decoder']
+
+        if 'transition' not in kwargs:
+            self.transition_func = train_linear_transition
+        else:
+            self.transition_func = kwargs['transition']
+            
+        
+    def train():
+        
+        
+        
+        
+            
+        
+            

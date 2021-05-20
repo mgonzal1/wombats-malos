@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.model_selection import train_test_split
 import numpy as np
 import scipy.signal as signal
@@ -278,7 +278,7 @@ def get_binary_response(data_set):
     return binary_response
 
 
-def split_validation_set(data_set, val_size=0.1, random_seed=None):
+def get_data_splits(data_set, val_size=0.1, random_seed=None):
     """
     Get a subset of alldat for validation purposes. This should be ~5%-10% of all the data.
     Excludes no go or no response trials and returns these as separate sets
@@ -326,29 +326,54 @@ def split_validation_set(data_set, val_size=0.1, random_seed=None):
 
     train_trials = np.sort( np.random.permutation(valid_trials)[:n_train_trials] )
     val_trials = np.setdiff1d(valid_trials, train_trials)
-
-    def _create_set(trial_idx):
-        new_set = {
-            "spks": spks[:, trial_idx],
-            "stims": stims[trial_idx],
-            "delta_contrast": delta_contrast[trial_idx],
-            "response": response[trial_idx],
-            "brain_area": data_set['brain_area'],
-            "trial_idx": trial_idx
-        }
-        
-        if 'fr' in data_set.keys():
-            new_set['fr'] = data_set['fr'][:, trial_idx]
-
-        return new_set
     
-    train_set = _create_set(train_trials)
-    val_set = _create_set(val_trials)
-    nogo_set = _create_set(nogo_trials)
-    noresp_set = _create_set(noresp_trials)
-    nono_set = _create_set(nono_trials)
-
+    train_set = create_trial_set(data_set, train_trials)
+    val_set = create_trial_set(data_set, val_trials)
+    nogo_set = create_trial_set(data_set, nogo_trials)
+    noresp_set = create_trial_set(data_set, noresp_trials)
+    nono_set = create_trial_set(data_set, nono_trials)
+    
     return train_set, val_set, nogo_set, noresp_set, nono_set
+
+def create_trial_set(data_set, trial_idx):
+    stims = get_stimulus(data_set)
+    delta_contrast = data_set['contrast_left']-data_set['contrast_right']
+    response = get_response(data_set)
+    spks = data_set['spks']
+
+    new_set = {
+                "spks": spks[:, trial_idx],
+                "stims": stims[trial_idx],
+                "delta_contrast": delta_contrast[trial_idx],
+                "response": response[trial_idx],
+                "brain_area": data_set['brain_area'],
+                "trial_idx": trial_idx
+                }
+    
+    if 'fr' in data_set.keys():
+        new_set['fr'] = data_set['fr'][:, trial_idx]
+    
+    return new_set
+
+def get_xval_trials(data_set, n_xval=10, random_seed=None):
+    """
+    
+    """
+    skf = StratifiedKFold(n_splits=n_xval, random_state=None, shuffle=False)
+    
+    y = data_set['response']
+    n_trials = len(y)
+    gskf = skf.split(X=np.zeros(n_trials), y=y)
+    
+    train = np.zeros(n_xval, dtype=object)
+    test = np.zeros(n_xval, dtype=object)
+    
+    cnt = 0
+    for train_idx, test_idx in gskf:
+        train[cnt] = train_idx
+        test[cnt] = test_idx
+        cnt+=1
+    return train, test
 
 
 # Draft of sigmoid calculation
@@ -358,4 +383,51 @@ def sigmoid(z):
 
 # scores
 ## to do:
+        
+def session_unit_counter(data, regions):
+    neurons_in_session = []
+    session_unit_region_counts = pd.DataFrame(index=range(len(data)), columns=regions.keys())
+    for i in range (0,len(data)):
+        session = data[i]
+        unit_brain_sub_area = session['brain_area']
+        for region, sub_areas in regions.items():
+            count = 0
+            for sub_area in sub_areas:
+                count += np.count_nonzero(unit_brain_sub_area == sub_area)    
+            session_unit_region_counts.loc[i,region ] = count
 
+    return session_unit_region_counts
+
+class dataset():
+    TRIAL_TIME_RANGE = np.array([-0.5, 2])
+    SAMP_RATE = 0.01
+    regions = {"visual": ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl"],
+               "motor": ["MOp", "MOs"]}
+    
+    def __init__(self, data, region1='visual', region2='motor', 
+                 n_min_region_units=20, data_type='fr', downsampling_factor='all'):
+        self.region1 = region1
+        self.region2 = region2
+        self.n_min_region_units=n_min_region_units
+        self.data_type = data_type
+        self.downsampling_factor = downsampling_factor
+        
+        self.valid_session_idx = self.select_sessions(data, region1, region2)
+        
+    def select_sessions(self, data, region1, region2):
+        
+        assert region1 in regions.keys(), f"Error {region1} not in available regions."
+        assert region2 in regions.keys(), f"Error {region2} not in available regions."
+        
+        unit_table = session_unit_counter(data, regions)
+        
+        valid_sessions = (unit_table[region1]>=self.n_min_region_units) & (unit_table[region2]>=self.n_min_region_units)
+        valid_sessions_idx = np.where(valid_sessions)[0]
+        
+        return valid_session_idx
+        
+    def select_data(self, data):
+        valid_data = data[self.valid_sessions_idx]
+        
+        
+        
