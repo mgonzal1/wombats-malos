@@ -203,7 +203,7 @@ class two_region_linear_model():
         self.n_xval = n_xval
         self.data_type = data_type
         
-        if time_window is None
+        if time_window is None:
             self.time_window = np.array([0, 0.5])
         else:
             if len(time_window)==2:
@@ -230,7 +230,7 @@ class two_region_linear_model():
             self.transition_func = kwargs['transition']
             
         
-    def train():
+#     def train():
         
         
         

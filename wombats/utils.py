@@ -7,6 +7,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.model_selection import train_test_split
 import numpy as np
+import pandas as pd
 import scipy.signal as signal
 import os
 import requests
@@ -255,7 +256,8 @@ def get_response(data_set):
         data_set: Subset of alldat
 
      Returns:
-          np.array: which side the response was (-1, 0, 1). Choices for the right stimulus are -1.
+          np.array: which side the response was (-1, 0, 1). 
+          Choices for the right stimulus are -1.
     """
     response = np.array(data_set['response'])
     return response
@@ -398,36 +400,143 @@ def session_unit_counter(data, regions):
 
     return session_unit_region_counts
 
-class dataset():
+class DataSet():
     TRIAL_TIME_RANGE = np.array([-0.5, 2])
     SAMP_RATE = 0.01
     regions = {"visual": ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl"],
                "motor": ["MOp", "MOs"]}
     
     def __init__(self, data, region1='visual', region2='motor', 
-                 n_min_region_units=20, data_type='fr', downsampling_factor='all'):
+                 n_min_region_units=20, data_type='fr', downsampling_factor='all', 
+                 analysis_time_window=[0, 0.5]):
+        
         self.region1 = region1
         self.region2 = region2
         self.n_min_region_units=n_min_region_units
         self.data_type = data_type
         self.downsampling_factor = downsampling_factor
         
-        self.valid_session_idx = self.select_sessions(data, region1, region2)
+        self.analysis_time_window =  np.array(analysis_time_window) # time window to analizee
+        self.exclude_pre = abs(analysis_time_window[0]-self.TRIAL_TIME_RANGE[0])
+        self.exclude_post  = abs(analysis_time_window[1]-self.TRIAL_TIME_RANGE[1])
+
+        self.valid_sessions_idx = self.select_sessions(data, region1, region2)
+        self.n_valid_sessions = len(self.valid_sessions_idx)
+        
+        self.data = self.select_data(data)
         
     def select_sessions(self, data, region1, region2):
         
-        assert region1 in regions.keys(), f"Error {region1} not in available regions."
-        assert region2 in regions.keys(), f"Error {region2} not in available regions."
+        assert region1 in self.regions.keys(), f"Error {region1} not in available regions."
+        assert region2 in self.regions.keys(), f"Error {region2} not in available regions."
         
-        unit_table = session_unit_counter(data, regions)
+        unit_table = session_unit_counter(data, self.regions)
         
         valid_sessions = (unit_table[region1]>=self.n_min_region_units) & (unit_table[region2]>=self.n_min_region_units)
         valid_sessions_idx = np.where(valid_sessions)[0]
         
-        return valid_session_idx
+        return valid_sessions_idx
+    
+    def _get_session_stimulus(self, data_set):
+        """
+         Args:
+            data_set: (map) Subset of alldat
+
+         Returns:
+            stims[nTrials x 3]  bias: constant with ones
+                                stim_left: contrast level for the right stimulus.
+                                stim_right: contrast level for left stimulus.
+        """
+
+        stims = data_set['contrast_left'], data_set['contrast_right']
+        stims = np.array(stims).T
+        n_trials = stims.shape[0]
+        stims = np.column_stack((np.ones(n_trials), stims))
+        return stims
+
+    def _get_session_response(self, data_set):
+        """
+         Args:
+            data_set: Subset of alldat
+
+         Returns:
+              np.array: which side the response was (-1, 0, 1). 
+              Choices for the right stimulus are 1.
+        """
+        response = -np.array(data_set['response'])
+        return response
+
+    def _get_session_spks_from_area(self, session_data, region):
+
+        index_neurons = np.isin(session_data['brain_area'], self.regions[region])
+        region_data = session_data['spks'][index_neurons]
+
+        return region_data
+
+    def _get_session_fr_from_spks(self, spks):
         
+        fr = spikes_to_fr(spks, samp_rate=self.SAMP_RATE, 
+                          downsampling_factor=self.downsampling_factor, 
+                          exclude_pre=self.exclude_pre, 
+                          exclude_post=self.exclude_post)
+        return fr
+    
+    def _get_session_trial_types(self, session_data):
+        
+        response = session_data['response']
+        delta_contrast = session_data['delta_contrast']
+        
+        n_trials = len(response)
+        all_trials = np.arange(n_trials)
+    
+        # no contrast no response
+        nono_trials = np.where((response==0) & (delta_contrast==0))[0]
+        
+        # no response / yes contrast
+        noresp_trials = np.setdiff1d( np.where(response==0)[0], nono_trials)
+       
+        #  no contrast / yes response
+        nogo_trials = np.setdiff1d( np.where(delta_contrast==0)[0], nono_trials)
+        
+        # invalid trials 
+        no_trials = np.union1d(np.union1d(nogo_trials, noresp_trials), nono_trials)
+
+        valid_trials = np.setdiff1d(all_trials, no_trials)
+        
+        # define trial types
+        trial_type = np.zeros(n_trials, dtype=object)
+        trial_type[valid_trials] = 'valid'
+        trial_type[nono_trials]  = 'nono'
+        trial_type[noresp_trials] = 'noresp'
+        trial_type[nogo_trials] = 'nogo'
+        
+        return trial_type
+    
     def select_data(self, data):
-        valid_data = data[self.valid_sessions_idx]
+        valid_session_data = data[self.valid_sessions_idx]
         
+        output_data = np.zeros(self.n_valid_sessions, dtype=object)
         
+        for session_idx in range(self.n_valid_sessions):
+            session_data = valid_session_data[session_idx]
+            
+            output_data[session_idx] = {}
+            output_data[session_idx]['stim'] = self._get_session_stimulus(session_data)
+            output_data[session_idx]['response'] = self._get_session_response(session_data)
+            output_data[session_idx]['delta_contrast'] = \
+                session_data['contrast_right'] - session_data['contrast_left']
+            
+            output_data[session_idx]['spks'] = {
+                'region1': self._get_session_spks_from_area(session_data, self.region1),
+                'region2':self._get_session_spks_from_area(session_data, self.region2)}
+            
+            output_data[session_idx]['fr'] = {
+                'region1': self._get_session_fr_from_spks(output_data[session_idx]['spks']['region1']),
+                'region2': self._get_session_fr_from_spks(output_data[session_idx]['spks']['region2']),
+            }
+            
+            output_data[session_idx]['trial_types'] = self._get_session_trial_types(output_data[session_idx])
+            
+        return output_data
+            
         
