@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
 from . import utils
+from . import metrics
 
 
 ## high level interfaces functions
@@ -17,16 +18,16 @@ def get_a1(stim, region_dat):
         encoder, encoder_coefs, encoder_model = train_linear_encoder(stim, region_dat)
         A1 = encoder_coefs
         
-        # get training data prediction
-        region_dat_hat = encoder(stim)  
+#         # get training data prediction
+#         region_dat_hat = encoder(stim)  
     
-        # get performance
-        encoder_perf = get_xval_perf(model=encoder_model, input_data=stim, output_data=region_dat, scoring='explained_variance')
+#         # get performance
+#         encoder_perf = metrics.get_xval_perf(model=encoder_model, input_data=stim, output_data=region_dat, scoring='explained_variance')
     else:
         # need to implement a method for time window iteration
         raise NotImplementedError
     
-    return A1, encoder_perf, region_dat_hat
+    return A1 #, encoder_perf, region_dat_hat
 
 
 def get_a2(region1_dat, region2_dat):
@@ -46,17 +47,17 @@ def get_a2(region1_dat, region2_dat):
         transition, transition_coefs, transition_model = train_linear_transition(region1_dat, region2_dat)
         A2 = transition_coefs
         
-        # get training data prediction
-        region2_dat_hat = transition(region1_dat)
+#         # get training data prediction
+#         region2_dat_hat = transition(region1_dat)
 
-        # get performance
-        transition_perf = get_xval_perf(model=transition_model, input_data=region1_dat, output_data=region2_dat, scoring='explained_variance')  
+#         # get performance
+#         transition_perf = metrics.get_xval_perf(model=transition_model, input_data=region1_dat, output_data=region2_dat, scoring='explained_variance')  
 
     else:
         # need to implement a method for time window iteration
         raise NotImplementedError
     
-    return A2, transition_perf, region2_dat_hat
+    return A2#, transition_perf, region2_dat_hat
 
 
 def get_a3(region_dat, output_dat):
@@ -70,16 +71,16 @@ def get_a3(region_dat, output_dat):
         decoder, decoder_coefs, decoder_model = train_logistic_decoder(region_dat, output_dat)
         A3 = decoder_coefs
         
-        # get prediction
-        region_dat_hat = decoder(region_dat)
+#         # get prediction
+#         region_dat_hat = decoder(region_dat)
     
-        # get performance
-        decoder_perf = get_xval_perf(model=decoder_model, input_data=region_dat, output_data=output_dat, scoring='balanced_accuracy')
-    else:
-        # need to implement a method for time window iteration
-        raise NotImplementedError
+#         # get performance
+#         decoder_perf = metrics.get_xval_perf(model=decoder_model, input_data=region_dat, output_data=output_dat, scoring='balanced_accuracy')
+#     else:
+#         # need to implement a method for time window iteration
+#         raise NotImplementedError
     
-    return A3, decoder_perf, region_dat_hat
+    return A3#, decoder_perf, region_dat_hat
 
 def get_ae(A1, A2, A3):
     return A1@A2@A3

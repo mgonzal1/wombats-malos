@@ -1,5 +1,5 @@
 import numpy as np
-
+from sklearn.model_selection import cross_val_score
 
 def r2(y, y_hat):
     """
@@ -76,12 +76,21 @@ def get_xval_perf(model, input_data, output_data, n_xval=10, scoring='explained_
         
     return perf
 
-def regression_performance_by_neuron(data, data_hat, xval_perf):
+# def regression_performance_by_neuron(data, data_hat, xval_perf):
+#     #MSE and R2 per unit
+#     scores = pd.DataFrame(columns = ['r2', 'xval_r2', 'mse', 'nrmse'])
+#     scores['r2'] = metrics.r2(data.T, data_hat.T)
+#     scores['mse'] = metrics.mse(data.T, data_hat.T)
+#     scores['nrmse'] = metrics.nrmse(data.T, data_hat.T)
+#     scores['xval_r2'] = np.median(xval_perf,axis=1)
+
+#     return scores.mean()
+
+def regression_performance_by_neuron(data, data_hat):
     #MSE and R2 per unit
-    scores = pd.DataFrame(columns = ['r2', 'xval_r2', 'mse', 'nrmse'])
+    scores = pd.DataFrame(columns = ['r2', 'mse', 'nrmse'])
     scores['r2'] = metrics.r2(data.T, data_hat.T)
     scores['mse'] = metrics.mse(data.T, data_hat.T)
     scores['nrmse'] = metrics.nrmse(data.T, data_hat.T)
-    scores['xval_r2'] = np.median(xval_perf,axis=1)
 
     return scores.mean()
