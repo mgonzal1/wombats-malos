@@ -12,7 +12,7 @@ import numpy as np
 # scramble conections (permute columns);
 #
 # next next todo: input pertubation idx
-def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwargs):
+def pert_connections(connection_mat, pert_pct=0.2, pert_type="ablation", **kwargs):
     """
     inputs:
         connection_mat : matrix with shape n_trials x n_neurons (or weights)
@@ -41,9 +41,10 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
     # ablation 
     n_trials, n_neurons = connection_mat.shape
    
-    n_pert_neurons = np.ceil(n_neurons*pct_pert)
+    n_pert_neurons = np.ceil(n_neurons*pert_pct).astype(int)
     pert_neurons = np.sort(np.random.permutation(n_neurons)[:n_pert_neurons])
     
+    pert_connection_mat = np.array(connection_mat)
     if pert_type=="ablation":
         pert_connection_mat[:,pert_neurons] = 0
     
@@ -54,21 +55,13 @@ def pert_connections(connection_mat, pct_pert=0.2, pert_type="ablation", **kwarg
     # poisson
     elif pert_type == 'poisson':
         pert_connection_mat[:,pert_neurons] = np.random.poisson(params['poisson_lam'], n_pert_neurons)
+        
+    return pert_connection_mat, pert_neurons
     
     # scramble connectivity - [Milli] sample from weight distribution
 
     # scramble neurons - [Adriana] scramble n_pert_neurons columns
 
     # strengthen - [Fran] param is % increase of true connectivity
-
-
-
-    
-    
-
-
-
-    
-    return pert_connection_mat, pert_idx 
 
 

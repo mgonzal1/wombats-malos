@@ -82,8 +82,12 @@ def get_a3(region_dat, output_dat):
     
     return A3#, decoder_perf, region_dat_hat
 
-def get_ae(A1, A2, A3):
-    return A1@A2@A3
+def get_ae(A):
+    AE = A[0]
+    for ii in range(1, len(A)):
+        AE = AE@A[ii]
+        
+    return AE
 
 def get_model_output(stim, AE=None, A1=None, A2=None, A3=None, output_type='bool'):
     

@@ -108,7 +108,7 @@ def spikes_to_fr(spk_data, samp_rate=0.01, smoothing_window=0.05, downsampling_f
     if exclude_post is None:
         trial_end_samp = n_trial_samps
     else:
-        trial_end_samp = n_trial_samps - np.round(exclude_pre / samp_rate).astype(int)
+        trial_end_samp = n_trial_samps - np.round(exclude_post / samp_rate).astype(int)
 
     trial_time = (trial_end_samp-trial_start_samp) * samp_rate
 
@@ -337,6 +337,7 @@ def get_data_splits(data_set, val_size=0.1, random_seed=None):
     
     return train_set, val_set, nogo_set, noresp_set, nono_set
 
+
 def create_trial_set(data_set, trial_idx):
     stims = get_stimulus(data_set)
     delta_contrast = data_set['contrast_left']-data_set['contrast_right']
@@ -356,6 +357,7 @@ def create_trial_set(data_set, trial_idx):
         new_set['fr'] = data_set['fr'][:, trial_idx]
     
     return new_set
+
 
 def get_xval_trials(data_set, n_xval=10, random_seed=None):
     """
@@ -425,6 +427,12 @@ class DataSet():
         
         self.data = self.select_data(data)
         
+        self.n_units_by_session = np.zeros(self.n_valid_sessions,2)
+        
+        for ii in range(self.n_valid_sessions):
+            self.n_units_by_session[ii,0] = self.data[ii]['fr']['region1'].shape
+            self.n_units_by_session[ii,1] = self.data[ii]['fr']['region2'].shape
+            
     def select_sessions(self, data, region1, region2):
         
         assert region1 in self.regions.keys(), f"Error {region1} not in available regions."
