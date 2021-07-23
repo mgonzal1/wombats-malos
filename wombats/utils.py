@@ -427,11 +427,11 @@ class DataSet():
         
         self.data = self.select_data(data)
         
-        self.n_units_by_session = np.zeros(self.n_valid_sessions,2)
+        self.n_units_by_session = np.zeros((self.n_valid_sessions,2))
         
         for ii in range(self.n_valid_sessions):
-            self.n_units_by_session[ii,0] = self.data[ii]['fr']['region1'].shape
-            self.n_units_by_session[ii,1] = self.data[ii]['fr']['region2'].shape
+            self.n_units_by_session[ii,0] = self.data[ii]['fr']['region1'].shape[0]
+            self.n_units_by_session[ii,1] = self.data[ii]['fr']['region2'].shape[0]
             
     def select_sessions(self, data, region1, region2):
         
