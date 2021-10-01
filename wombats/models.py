@@ -142,11 +142,9 @@ def train_logistic_decoder(dat_input, dat_output, output_type='bool'):
     :return: decoder, decoder_coef.
     -> decoder: goes from n_neurons to 1 dimension (probability)
     """
-    # unpenalized LR
-    model = LogisticRegression(penalty="none",
-                               fit_intercept=False,
+    model = LogisticRegression(C=100,fit_intercept=False,
                                class_weight="balanced",
-                               max_iter=5000)
+                               max_iter=1000, solver="newton-cg")
     fit = model.fit(dat_input, dat_output)
 
     coefs = fit.coef_.T
